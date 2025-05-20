@@ -1,0 +1,3 @@
+[submodule "coolprop"]
+	path = coolprop
+	url = https://github.com/CoolProp/CoolProp.git

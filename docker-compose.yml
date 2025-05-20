@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  coolprop-builder:
+    image: emscripten/emsdk:4.0.6
+    volumes:
+      - ./:/app
+    working_dir: /app
+    environment:
+      EMSDK_VERSION: "4.0.6"
+    command: [ "bash", "./build.sh" ]

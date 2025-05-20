@@ -1,0 +1,20 @@
+build/
+dist/
+node_modules/
+.git/
+.gitignore
+Dockerfile
+docker-compose.yml
+*.log
+*.sh
+coolprop/
+bindings/
+CMakeLists.txt
+*.md
+*.yml
+*.yaml
+jest.config.js
+test.ts
+# Include wasm for npm
+!wasm/
+!wasm/coolprop.*
