@@ -1,6 +1,6 @@
 {
   "name": "coolprop-wasm",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A TypeScript wrapper for the CoolProp library using WebAssembly",
   "scripts": {
     "build": "docker-compose up --build",
