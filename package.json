@@ -1,5 +1,5 @@
 {
-  "name": "coolprop-wasm",
+  "name": "@luisbedoia/coolprop-wasm",
   "version": "0.0.1",
   "description": "A TypeScript wrapper for the CoolProp library using WebAssembly",
   "scripts": {
@@ -42,6 +42,6 @@
     "wasm/coolprop.d.ts"
   ],
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://npm.pkg.github.com/"
   }
 }

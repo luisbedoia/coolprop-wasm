@@ -16,10 +16,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: "https://registry.npmjs.org/"
-
-      - name: Mark /app as safe directory for git
-        run: git config --global --add safe.directory /app
+          registry-url: "https://npm.pkg.github.com/"
 
       - name: Install docker-compose
         run: sudo apt-get update && sudo apt-get install -y docker-compose
@@ -29,3 +26,7 @@ jobs:
 
       - name: Build package
         run: npm run build
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

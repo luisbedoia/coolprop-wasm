@@ -7,6 +7,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${ROOT_DIR}/build"
 INSTALL_DIR="${ROOT_DIR}/wasm"
 
+git config --global --add safe.directory /app
+git config --global --add safe.directory /app/coolprop
+
+git submodule update --init --recursive
 git -C coolprop fetch --tags
 git -C coolprop checkout v6.8.0
 
