@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A TypeScript wrapper for the CoolProp library using WebAssembly",
   "scripts": {
-    "build": "tsc",
+    "build": "docker-compose up --build",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
