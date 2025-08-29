@@ -29,20 +29,32 @@ npm install @luisbedoia/coolprop-wasm
 
 ## Basic usage
 
-```typescript
-import MainModuleFactory from '@luisbedoia/coolprop-wasm';
+### ESM (JavaScript/TypeScript)
+```ts
+import createCoolProp from '@luisbedoia/coolprop-wasm';
 
 (async () => {
-    const CP = await MainModuleFactory();
-
-    // Example: get the density of water at 300 K and 1 atm
+    const CP = await createCoolProp();
     const density = CP.PropsSI('D', 'T', 300, 'P', 101325, 'Water');
     console.log('Density:', density, 'kg/m³');
 })();
 ```
 
-- The main file is `wasm/coolprop.js` and the WebAssembly binary is `wasm/coolprop.wasm`.
-- TypeScript types are in `wasm/coolprop.d.ts`.
+### CommonJS (require)
+```js
+const createCoolProp = require('@luisbedoia/coolprop-wasm');
+
+(async () => {
+    const CP = await createCoolProp();
+    const density = CP.PropsSI('D', 'T', 300, 'P', 101325, 'Water');
+    console.log('Density:', density, 'kg/m³');
+})();
+```
+
+- Exports support both ESM (`import`) and CJS (`require`).
+- Entry point (ESM): `wasm/coolprop.js`; CJS bridge: `coolprop.cjs`.
+- WebAssembly binary: `wasm/coolprop.wasm`.
+- TypeScript types: `wasm/coolprop.d.ts`.
 
 ---
 

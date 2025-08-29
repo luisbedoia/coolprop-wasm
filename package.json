@@ -34,9 +34,20 @@
     "url": "https://github.com/luisbedoia/coolprop-wasm/issues"
   },
   "homepage": "https://github.com/luisbedoia/coolprop-wasm#readme",
-  "main": "wasm/coolprop.js",
+  "type": "module",
+  "main": "coolprop.cjs",
+  "module": "wasm/coolprop.js",
   "types": "wasm/coolprop.d.ts",
+  "exports": {
+    ".": {
+      "types": "./wasm/coolprop.d.ts",
+      "import": "./wasm/coolprop.js",
+      "require": "./coolprop.cjs",
+      "default": "./wasm/coolprop.js"
+    }
+  },
   "files": [
+    "coolprop.cjs",
     "wasm/coolprop.js",
     "wasm/coolprop.wasm",
     "wasm/coolprop.d.ts"
