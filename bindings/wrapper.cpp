@@ -14,6 +14,7 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(coolprop_bindings)
 {
     function("PropsSI", &CoolProp::PropsSI);
+    function("get_global_param_string", &CoolProp::get_global_param_string);
 }
 
 #endif
