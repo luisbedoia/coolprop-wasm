@@ -91,6 +91,7 @@ list(REMOVE_ITEM APP_SOURCES
 
 list(APPEND APP_SOURCES
   "${COOLPROP_DIR}/src/CoolPropLib.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/bindings/property_plot_utils.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/bindings/wrapper.cpp"
 )
 
