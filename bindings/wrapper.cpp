@@ -6,6 +6,7 @@
 #include "HumidAirProp.h"
 #include "DataStructures.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "CoolPropLib.h"
 #include "CoolPropPlot.h"
 #include "CPstrings.h"
@@ -30,6 +31,8 @@ EMSCRIPTEN_BINDINGS(coolprop_bindings)
 {
     function("PropsSI", &CoolProp::PropsSI);
     function("get_global_param_string", &CoolProp::get_global_param_string);
+    function("get_fluid_param_string", &CoolProp::get_fluid_param_string);
+    function("get_fluid_as_JSONstring", &CoolProp::get_fluid_as_JSONstring);
     function("compute_property_plot", &CoolPropWasm::compute_property_plot);
     function("get_parameter_index", &get_parameter_index_js);
     function("get_phase_index", &get_phase_index_js);
