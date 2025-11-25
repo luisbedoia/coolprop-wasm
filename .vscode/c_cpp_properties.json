@@ -1,0 +1,32 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/bindings",
+                "${workspaceFolder}/coolprop",
+                "${workspaceFolder}/coolprop/include",
+                "${workspaceFolder}/coolprop/src",
+                "${workspaceFolder}/coolprop/externals",
+                "${workspaceFolder}/**"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/bindings",
+                    "${workspaceFolder}/coolprop",
+                    "${workspaceFolder}/coolprop/include",
+                    "${workspaceFolder}/coolprop/src",
+                    "${workspaceFolder}/coolprop/externals"
+                ]
+            },
+            "defines": [
+                "EMSCRIPTEN"
+            ],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "macos-clang-x64"
+        }
+    ],
+    "version": 4
+}
