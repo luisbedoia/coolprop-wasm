@@ -220,9 +220,8 @@ int get_phase_index_js(const std::string& phase) {
     return static_cast<int>(CoolProp::get_phase_index(phase));
 }
 
-std::string get_parameter_information_js(const std::string& key, const std::string& field) {
-    const auto idx = static_cast<int>(CoolProp::get_parameter_index(key));
-    return CoolProp::get_parameter_information(idx, field);
+std::string get_parameter_information_js(const int& key, const std::string& field) {
+    return CoolProp::get_parameter_information(key, field);
 }
 
 std::string get_phase_short_desc_js(int idx) {
