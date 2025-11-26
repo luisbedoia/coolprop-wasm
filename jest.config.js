@@ -1,7 +1,6 @@
-module.exports = {
-  preset: 'ts-jest',
+export default {
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
-  testMatch: ['**/*.test.ts'],
-  moduleFileExtensions: ['ts', 'js', 'json', 'node'],
+  testMatch: ['**/*.test.js'],
+  moduleFileExtensions: ['js', 'json', 'node'],
 };

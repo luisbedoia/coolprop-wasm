@@ -2,7 +2,8 @@
     "files.associations": {
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "__locale": "cpp"
+        "__locale": "cpp",
+        "optional": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

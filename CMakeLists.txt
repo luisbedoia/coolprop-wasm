@@ -68,6 +68,8 @@ set(APP_INCLUDE_DIRS
   "${COOLPROP_DIR}/externals/fmtlib/include"
   "${COOLPROP_DIR}/boost_CoolProp"
   "${COOLPROP_DIR}/dev"
+  "${CMAKE_CURRENT_SOURCE_DIR}/bindings"
+  "${CMAKE_CURRENT_SOURCE_DIR}/bindings/plot"
 )
 include_directories(${APP_INCLUDE_DIRS})
 
@@ -92,6 +94,7 @@ list(REMOVE_ITEM APP_SOURCES
 list(APPEND APP_SOURCES
   "${COOLPROP_DIR}/src/CoolPropLib.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/bindings/wrapper.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/bindings/plot/PlotDataModule.cpp"
 )
 
 # ─── Generate fluid & mixture headers ─────────────────────────────────────────
