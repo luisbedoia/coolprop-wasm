@@ -27,15 +27,25 @@ int get_phase_index_js(const std::string &phase)
     return static_cast<int>(CoolProp::get_phase_index(phase));
 }
 
+std::string get_parameter_information_js(const std::string& key, const std::string& field) {
+    const auto idx = static_cast<int>(CoolProp::get_parameter_index(key));
+    return CoolProp::get_parameter_information(idx, field);
+}
+
+std::string get_phase_short_desc_js(int idx) {
+    return CoolProp::get_phase_short_desc(static_cast<CoolProp::phases>(idx));
+}
+
 EMSCRIPTEN_BINDINGS(coolprop_bindings)
 {
     function("PropsSI", &CoolProp::PropsSI);
     function("get_global_param_string", &CoolProp::get_global_param_string);
     function("get_fluid_param_string", &CoolProp::get_fluid_param_string);
-    function("get_fluid_as_JSONstring", &CoolProp::get_fluid_as_JSONstring);
-    function("compute_property_plot", &CoolPropWasm::compute_property_plot);
+    function("get_parameter_information", &get_parameter_information_js);
     function("get_parameter_index", &get_parameter_index_js);
+    function("compute_property_plot", &CoolPropWasm::compute_property_plot);
     function("get_phase_index", &get_phase_index_js);
+    function("get_phase_short_desc", &get_phase_short_desc_js);
     function("list_supported_property_plots", &CoolPropWasm::list_supported_property_plots);
 }
 
