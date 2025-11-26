@@ -8,12 +8,9 @@
 #include "Backends/Helmholtz/MixtureParameters.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "CoolPropLib.h"
-#include "CoolPropPlot.h"
 #include "CPstrings.h"
-#include "property_plot_utils.h"
 
 #include <emscripten/bind.h>
-#include <map>
 #include <string>
 
 using namespace emscripten;
@@ -70,10 +67,8 @@ EMSCRIPTEN_BINDINGS(coolprop_bindings)
     function("get_fluid_param_string", &CoolProp::get_fluid_param_string);
     function("get_parameter_information", &get_parameter_information_js);
     function("get_parameter_index", &get_parameter_index_js);
-    function("compute_property_plot", &CoolPropWasm::compute_property_plot);
     function("get_phase_index", &get_phase_index_js);
     function("get_phase_short_desc", &get_phase_short_desc_js);
-    function("list_supported_property_plots", &CoolPropWasm::list_supported_property_plots);
 }
 
 #endif
