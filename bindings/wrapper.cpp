@@ -13,6 +13,7 @@
 #include "property_plot_utils.h"
 
 #include <emscripten/bind.h>
+#include <map>
 #include <string>
 
 using namespace emscripten;
@@ -33,7 +34,33 @@ std::string get_parameter_information_js(const std::string& key, const std::stri
 }
 
 std::string get_phase_short_desc_js(int idx) {
-    return CoolProp::get_phase_short_desc(static_cast<CoolProp::phases>(idx));
+    static std::map<int, std::string> phase_lookup;
+    if (phase_lookup.empty()) {
+        const char* phase_names[] = {
+            "phase_liquid",
+            "phase_gas",
+            "phase_twophase",
+            "phase_supercritical",
+            "phase_supercritical_gas",
+            "phase_supercritical_liquid",
+            "phase_critical_point",
+            "phase_unknown",
+            "phase_not_imposed"
+        };
+        for (const auto* name : phase_names) {
+            try {
+                auto phase = CoolProp::get_phase_index(name);
+                phase_lookup.emplace(static_cast<int>(phase), name);
+            } catch (...) {
+                // Skip names that are not recognized in this build
+            }
+        }
+    }
+    auto it = phase_lookup.find(idx);
+    if (it != phase_lookup.end()) {
+        return it->second;
+    }
+    return "phase_unknown";
 }
 
 EMSCRIPTEN_BINDINGS(coolprop_bindings)
