@@ -87,10 +87,10 @@ bool can_generate_isoline(const PlotDefinition& definition, const PropertyPlot& 
     if (is_axis_parameter(definition, parameter)) {
         return true;
     }
-    // if (parameter == CoolProp::iDmass || parameter == CoolProp::iSmass) {
-    //     std::cerr << "Skipping unsupported isoline parameter " << static_cast<int>(parameter) << std::endl;
-    //     return false;
-    // }
+    if (parameter == CoolProp::iDmass || parameter == CoolProp::iSmass) {
+        std::cerr << "Skipping unsupported isoline parameter " << static_cast<int>(parameter) << std::endl;
+        return false;
+    }
     std::cerr << "can_generate_isoline begin " << static_cast<int>(parameter) << std::endl;
     try {
         Range range = plot.isoline_range(parameter);
