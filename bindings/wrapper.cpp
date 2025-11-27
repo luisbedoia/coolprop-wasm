@@ -183,7 +183,15 @@ std::vector<CoolProp::Plot::IsolineSpec> parse_isoline_specs(const val& specsVal
 }
 
 val describe_fluid_plots_js(const std::string& fluid) {
-    return to_js_plot_catalogue(CoolProp::Plot::describe_fluid_plots(fluid));
+    try {
+        return to_js_plot_catalogue(CoolProp::Plot::describe_fluid_plots(fluid));
+    } catch (const std::exception& err) {
+        std::cerr << "describe_fluid_plots(" << fluid << ") threw std::exception: " << err.what() << std::endl;
+        throw;
+    } catch (...) {
+        std::cerr << "describe_fluid_plots(" << fluid << ") threw unknown exception" << std::endl;
+        throw;
+    }
 }
 
 val build_property_plot_js(const val& requestVal) {

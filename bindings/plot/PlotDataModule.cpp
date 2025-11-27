@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <limits>
 #include <set>
 
@@ -22,9 +23,136 @@ struct PlotDefinition {
 
 const std::vector<PlotDefinition>& plot_definitions() {
     static const std::vector<PlotDefinition> definitions = {
-        {"ph", "Pressure-Enthalpy", CoolProp::iP, CoolProp::iHmass, TPLimits::Achp}
+        {"ph", "Pressure-Enthalpy", CoolProp::iP, CoolProp::iHmass, TPLimits::Def}
     };
     return definitions;
+}
+
+inline bool has_finite_sample(const Isoline& isoline) {
+    for (std::size_t i = 0; i < isoline.x.size(); ++i) {
+        if (std::isfinite(isoline.x[i]) && std::isfinite(isoline.y[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool is_axis_parameter(const PlotDefinition& definition, CoolProp::parameters parameter) {
+    return parameter == definition.xParameter || parameter == definition.yParameter;
+}
+
+inline void ensure_axis_parameters(const PlotDefinition& definition,
+                                   std::vector<CoolProp::parameters>& collection) {
+    if (std::find(collection.begin(), collection.end(), definition.xParameter) == collection.end()) {
+        collection.push_back(definition.xParameter);
+    }
+    if (std::find(collection.begin(), collection.end(), definition.yParameter) == collection.end()) {
+        collection.push_back(definition.yParameter);
+    }
+}
+
+inline Range range_for_parameter(const PlotDefinition& definition,
+                                 const PropertyPlot& plot,
+                                 CoolProp::parameters parameter) {
+    if (parameter == definition.xParameter) {
+        return plot.xaxis.range;
+    }
+    if (parameter == definition.yParameter) {
+        return plot.yaxis.range;
+    }
+    return plot.isoline_range(parameter);
+}
+
+inline IsolineCurve make_vertical_isoline(double value, int points, const PropertyPlot& plot, const PlotDefinition& definition) {
+    IsolineCurve curve;
+    curve.parameter = static_cast<int>(definition.xParameter);
+    curve.value = value;
+    std::vector<double> yValues = generate_values_in_range(plot.yaxis.scale, plot.yaxis.range, points);
+    curve.y = std::move(yValues);
+    curve.x.assign(curve.y.size(), value);
+    return curve;
+}
+
+inline IsolineCurve make_horizontal_isoline(double value, int points, const PropertyPlot& plot, const PlotDefinition& definition) {
+    IsolineCurve curve;
+    curve.parameter = static_cast<int>(definition.yParameter);
+    curve.value = value;
+    std::vector<double> xValues = generate_values_in_range(plot.xaxis.scale, plot.xaxis.range, points);
+    curve.x = std::move(xValues);
+    curve.y.assign(curve.x.size(), value);
+    return curve;
+}
+
+bool can_generate_isoline(const PlotDefinition& definition, const PropertyPlot& plot, CoolProp::parameters parameter) {
+    if (is_axis_parameter(definition, parameter)) {
+        return true;
+    }
+    // if (parameter == CoolProp::iDmass || parameter == CoolProp::iSmass) {
+    //     std::cerr << "Skipping unsupported isoline parameter " << static_cast<int>(parameter) << std::endl;
+    //     return false;
+    // }
+    std::cerr << "can_generate_isoline begin " << static_cast<int>(parameter) << std::endl;
+    try {
+        Range range = plot.isoline_range(parameter);
+        if (!std::isfinite(range.min) || !std::isfinite(range.max)) {
+            return false;
+        }
+        if (range.max <= range.min) {
+            return false;
+        }
+
+        const double span = range.max - range.min;
+        if (!std::isfinite(span) || span <= 0.0) {
+            return false;
+        }
+
+        std::vector<double> values = generate_values_in_range(parameter, range, 3);
+        std::vector<double> sanitized;
+        sanitized.reserve(values.size());
+        double guard = span * 5e-3;
+        if (!std::isfinite(guard) || guard <= 0.0) {
+            guard = span * 0.5;
+        }
+        double innerMin = range.min + guard;
+        double innerMax = range.max - guard;
+        if (innerMax <= innerMin || !std::isfinite(innerMin) || !std::isfinite(innerMax)) {
+            const double mid = range.min + span * 0.5;
+            innerMin = mid;
+            innerMax = mid;
+        }
+        for (double value : values) {
+            if (!std::isfinite(value)) {
+                continue;
+            }
+            value = std::min(std::max(value, innerMin), innerMax);
+            if (parameter == CoolProp::iQ) {
+                const double epsilon = std::max(1e-6, span * 1e-3);
+                value = std::min(std::max(value, range.min + epsilon), range.max - epsilon);
+            }
+            sanitized.push_back(value);
+        }
+
+        if (sanitized.empty()) {
+            return false;
+        }
+
+        const int points = 50;
+        std::cerr << "range min=" << range.min << " max=" << range.max << std::endl;
+        for (double value : sanitized) {
+            std::cerr << " value candidate=" << value << std::endl;
+        }
+
+        const Isolines curves = plot.calc_isolines(parameter, sanitized, points);
+        if (curves.empty()) {
+            return false;
+        }
+        const bool finite = has_finite_sample(curves.front());
+        std::cerr << "can_generate_isoline success " << static_cast<int>(parameter) << " finite=" << finite << std::endl;
+        return finite;
+    } catch (...) {
+        std::cerr << "can_generate_isoline exception for parameter " << static_cast<int>(parameter) << std::endl;
+        return false;
+    }
 }
 
 inline AxisMetadata make_axis_metadata(CoolProp::parameters parameter, const PropertyPlot::Axis& axis) {
@@ -34,7 +162,6 @@ inline AxisMetadata make_axis_metadata(CoolProp::parameters parameter, const Pro
     meta.range = Range{axis.min, axis.max};
     return meta;
 }
-
 inline ParameterRange make_parameter_range(CoolProp::parameters parameter, const Range& range) {
     ParameterRange pr;
     pr.parameter = static_cast<int>(parameter);
@@ -87,6 +214,7 @@ PlotCatalogue describe_fluid_plots(const std::string& fluid) {
     for (const auto& definition : plot_definitions()) {
         try {
             PropertyPlot plot(fluid, definition.yParameter, definition.xParameter, definition.limits);
+            std::cerr << "Built plot for fluid " << fluid << std::endl;
 
             PlotTypeDescriptor descriptor;
             descriptor.id = definition.id;
@@ -94,21 +222,40 @@ PlotCatalogue describe_fluid_plots(const std::string& fluid) {
             descriptor.xAxis = make_axis_metadata(definition.xParameter, plot.xaxis);
             descriptor.yAxis = make_axis_metadata(definition.yParameter, plot.yaxis);
 
-            const auto supported = plot.supported_isoline_keys();
-            descriptor.isolineOptions.reserve(supported.size());
+            std::vector<CoolProp::parameters> supported = plot.supported_isoline_keys();
+            std::cerr << "Supported count: " << supported.size() << std::endl;
+            std::vector<CoolProp::parameters> filtered;
+            filtered.reserve(supported.size());
             for (auto parameter : supported) {
+                std::cerr << "Checking parameter " << static_cast<int>(parameter) << std::endl;
+                if (can_generate_isoline(definition, plot, parameter)) {
+                    filtered.push_back(parameter);
+                }
+            }
+
+            ensure_axis_parameters(definition, filtered);
+
+            std::cerr << "Filtered count: " << filtered.size() << std::endl;
+            descriptor.isolineOptions.reserve(filtered.size());
+            for (auto parameter : filtered) {
                 try {
-                    descriptor.isolineOptions.push_back(make_parameter_range(parameter, plot.isoline_range(parameter)));
+                    std::cerr << "Range for parameter " << static_cast<int>(parameter) << std::endl;
+                    descriptor.isolineOptions.push_back(make_parameter_range(parameter, range_for_parameter(definition, plot, parameter)));
                 } catch (...) {
                     // Unexpected failures: skip problematic parameters
+                    std::cerr << "Failed to get range for parameter " << static_cast<int>(parameter) << std::endl;
                 }
             }
 
             catalogue.plots.push_back(descriptor);
+            std::cerr << "Added plot descriptor with " << descriptor.isolineOptions.size() << " isolines" << std::endl;
         } catch (...) {
             // If plot cannot be constructed for this fluid, skip it silently
+            std::cerr << "Failed to build plot for fluid " << fluid << std::endl;
         }
     }
+
+    std::cerr << "Returning catalogue with " << catalogue.plots.size() << " plots" << std::endl;
 
     return catalogue;
 }
@@ -133,11 +280,21 @@ PlotData build_plot(const PlotRequest& request) {
     result.xAxis = make_axis_metadata(definition->xParameter, plot.xaxis);
     result.yAxis = make_axis_metadata(definition->yParameter, plot.yaxis);
 
-    const auto supported = plot.supported_isoline_keys();
-    result.availableIsolines.reserve(supported.size());
+    std::vector<CoolProp::parameters> supported = plot.supported_isoline_keys();
+    std::vector<CoolProp::parameters> filtered;
+    filtered.reserve(supported.size());
     for (auto parameter : supported) {
+        if (can_generate_isoline(*definition, plot, parameter)) {
+            filtered.push_back(parameter);
+        }
+    }
+
+    ensure_axis_parameters(*definition, filtered);
+
+    result.availableIsolines.reserve(filtered.size());
+    for (auto parameter : filtered) {
         try {
-            result.availableIsolines.push_back(make_parameter_range(parameter, plot.isoline_range(parameter)));
+            result.availableIsolines.push_back(make_parameter_range(parameter, range_for_parameter(*definition, plot, parameter)));
         } catch (...) {
             ParameterRange pr;
             pr.parameter = static_cast<int>(parameter);
@@ -163,21 +320,31 @@ PlotData build_plot(const PlotRequest& request) {
         }
 
         const int points = spec.points > 0 ? spec.points : defaultPoints;
-        const auto isolines = plot.calc_isolines(parameter, values, points);
-        for (const auto& isoline : isolines) {
-            IsolineCurve curve;
-            curve.parameter = static_cast<int>(parameter);
-            curve.value = isoline.value;
-            curve.x = isoline.x;
-            curve.y = isoline.y;
-            result.isolines.push_back(curve);
+        if (is_axis_parameter(*definition, parameter)) {
+            const int axisPoints = std::max(points, 2);
+            for (double value : values) {
+                IsolineCurve curve = (parameter == definition->xParameter)
+                                         ? make_vertical_isoline(value, axisPoints, plot, *definition)
+                                         : make_horizontal_isoline(value, axisPoints, plot, *definition);
+                result.isolines.push_back(std::move(curve));
+            }
+        } else {
+            const auto isolines = plot.calc_isolines(parameter, values, points);
+            for (const auto& isoline : isolines) {
+                IsolineCurve curve;
+                curve.parameter = static_cast<int>(parameter);
+                curve.value = isoline.value;
+                curve.x = isoline.x;
+                curve.y = isoline.y;
+                result.isolines.push_back(curve);
+            }
         }
         result.generatedIsolines.push_back(make_parameter_range(parameter, usedRange));
         generatedParameters.insert(static_cast<int>(parameter));
     }
 
     const auto saturationParameter = CoolProp::iQ;
-    const bool supportsSaturation = std::find(supported.begin(), supported.end(), saturationParameter) != supported.end();
+    const bool supportsSaturation = std::find(filtered.begin(), filtered.end(), saturationParameter) != filtered.end();
     if (request.includeSaturationCurves && supportsSaturation && !contains_parameter(generatedParameters, saturationParameter)) {
         try {
             const Range qRange = plot.isoline_range(saturationParameter);

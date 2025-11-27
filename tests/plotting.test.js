@@ -73,7 +73,7 @@ describe('CoolProp plotting bindings', () => {
     const phPlot = catalogue.plots.find((plot) => plot.id === 'ph');
     expect(phPlot).toBeTruthy();
 
-    const targetIsoline = phPlot.isolineOptions[0];
+    const targetIsoline = phPlot.isolineOptions[2];
     expect(targetIsoline).toBeTruthy();
 
     const request = {
