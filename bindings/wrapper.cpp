@@ -228,11 +228,7 @@ int get_phase_index_js(const std::string& phase) {
     return static_cast<int>(CoolProp::get_phase_index(phase));
 }
 
-std::string get_parameter_information_js(const int& key, const std::string& field) {
-    return CoolProp::get_parameter_information(key, field);
-}
-
-std::string get_phase_short_desc_js(int idx) {
+std::string get_phase_name(int idx) {
     static std::map<int, std::string> phase_lookup;
     if (phase_lookup.empty()) {
         const char* phase_names[] = {
@@ -264,13 +260,13 @@ std::string get_phase_short_desc_js(int idx) {
 }
 
 EMSCRIPTEN_BINDINGS(coolprop_bindings) {
-    function("PropsSI", &CoolProp::PropsSI);
-    function("get_global_param_string", &CoolProp::get_global_param_string);
-    function("get_fluid_param_string", &CoolProp::get_fluid_param_string);
-    function("get_parameter_information", &get_parameter_information_js);
-    function("get_parameter_index", &get_parameter_index_js);
-    function("get_phase_index", &get_phase_index_js);
-    function("get_phase_short_desc", &get_phase_short_desc_js);
+    function("propsSI", &CoolProp::PropsSI);
+    function("getGlobalParamString", &CoolProp::get_global_param_string);
+    function("getFluidParamString", &CoolProp::get_fluid_param_string);
+    function("getParameterInformation", &CoolProp::get_parameter_information);
+    function("getParameterIndex", &get_parameter_index_js);
+    function("getPhaseIndex", &get_phase_index_js);
+    function("getPhaseName", &get_phase_name);
     function("describeFluidPlots", &describe_fluid_plots_js);
     function("buildPropertyPlot", &build_property_plot_js);
 }
