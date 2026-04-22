@@ -58,7 +58,7 @@ echo ">>> Install dir     : ${INSTALL_DIR}"
 mkdir -p "${BUILD_DIR}"
 mkdir -p "${INSTALL_DIR}"
 
-npm install -g typescript
+npm install -g typescript@5.4
 
 emcmake cmake -B "${BUILD_DIR}" \
     -DCMAKE_BUILD_TYPE=Release
