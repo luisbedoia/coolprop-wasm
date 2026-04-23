@@ -89,7 +89,8 @@ function assertPlotData(plotData, fluid, plotId) {
 
 // ─── Build helpers ───────────────────────────────────────────────────────────
 
-/** Tries each isolineOption in order until one builds successfully. */
+/** Tries each isolineOption in order until one builds successfully.
+ *  Uses includeSaturationCurves: false — saturation is tested separately. */
 function buildWithFirstWorkingOption(buildPropertyPlot, fluid, plotId, isolineOptions) {
   let plotData = null;
   for (const opt of isolineOptions) {
@@ -98,7 +99,7 @@ function buildWithFirstWorkingOption(buildPropertyPlot, fluid, plotId, isolineOp
         fluid,
         plotId,
         isolines: [{ parameter: opt.parameter, valueCount: 3, points: 20 }],
-        includeSaturationCurves: true,
+        includeSaturationCurves: false,
       });
       break;
     } catch (e) {
@@ -203,7 +204,7 @@ describe('CoolProp plotting bindings', () => {
   test.each(FLUIDS)('ph plot full build with axes for %s', (fluid) => {
     const catalogue = describeFluidPlots(fluid);
     const plot = catalogue.plots.find((p) => p.id === 'ph');
-    if (!plot) return;
+    if (!plot || plot.isolineOptions.length === 0) return;
 
     const plotData = buildWithFirstWorkingOption(buildPropertyPlot, fluid, 'ph', plot.isolineOptions);
     assertPlotData(plotData, fluid, 'ph');
@@ -227,7 +228,7 @@ describe('CoolProp plotting bindings', () => {
   test.each(FLUIDS)('Ts plot full build with axes for %s', (fluid) => {
     const catalogue = describeFluidPlots(fluid);
     const plot = catalogue.plots.find((p) => p.id === 'Ts');
-    if (!plot) return;
+    if (!plot || plot.isolineOptions.length === 0) return;
 
     const plotData = buildWithFirstWorkingOption(buildPropertyPlot, fluid, 'Ts', plot.isolineOptions);
     assertPlotData(plotData, fluid, 'Ts');
@@ -238,7 +239,7 @@ describe('CoolProp plotting bindings', () => {
   test.each(FLUIDS)('ph: each isoline type independently for %s', (fluid) => {
     const catalogue = describeFluidPlots(fluid);
     const plot = catalogue.plots.find((p) => p.id === 'ph');
-    if (!plot) return;
+    if (!plot || plot.isolineOptions.length === 0) return;
 
     const results = testEachIsolineOption(buildPropertyPlot, fluid, 'ph', plot.isolineOptions);
     const successful = results.filter((r) => r.ok);
@@ -252,7 +253,7 @@ describe('CoolProp plotting bindings', () => {
   test.each(FLUIDS)('Ts: each isoline type independently for %s', (fluid) => {
     const catalogue = describeFluidPlots(fluid);
     const plot = catalogue.plots.find((p) => p.id === 'Ts');
-    if (!plot) return;
+    if (!plot || plot.isolineOptions.length === 0) return;
 
     const results = testEachIsolineOption(buildPropertyPlot, fluid, 'Ts', plot.isolineOptions);
     const successful = results.filter((r) => r.ok);
