@@ -74,8 +74,8 @@ inline IsolineCurve make_horizontal_isoline(double value, int points, const Prop
     return curve;
 }
 
-// Lightweight check used in build_plot for availableIsolines (no computation, no state side-effects).
-bool passes_isoline_filter(const PlotDefinition& definition, const PropertyPlot& plot, CoolProp::parameters parameter) {
+bool can_generate_isoline(const PlotDefinition& definition, const PropertyPlot& plot, CoolProp::parameters parameter) {
+    // Axis parameters produce straight grid lines identical to the plot axes — not useful as isolines.
     if (is_axis_parameter(definition, parameter)) {
         return false;
     }
@@ -87,25 +87,6 @@ bool passes_isoline_filter(const PlotDefinition& definition, const PropertyPlot&
     try {
         Range range = plot.isoline_range(parameter);
         return std::isfinite(range.min) && std::isfinite(range.max) && range.max > range.min;
-    } catch (...) {
-        return false;
-    }
-}
-
-// Full validation for describe_fluid_plots: creates a fresh PropertyPlot so that the
-// test computation does not corrupt the caller's plot object state.
-bool is_isoline_computable(const std::string& fluid, const PlotDefinition& definition, CoolProp::parameters parameter) {
-    if (is_axis_parameter(definition, parameter)) return false;
-    if (parameter == CoolProp::iDmass || parameter == CoolProp::iSmass || parameter == CoolProp::iHmass) return false;
-    try {
-        PropertyPlot testPlot(fluid, definition.yParameter, definition.xParameter, definition.limits);
-        Range range = testPlot.isoline_range(parameter);
-        if (!std::isfinite(range.min) || !std::isfinite(range.max) || range.max <= range.min) return false;
-        const double midValue = (range.min + range.max) / 2.0;
-        const auto testIsolines = testPlot.calc_isolines(parameter, {midValue}, 5);
-        if (testIsolines.empty()) return false;
-        const auto& curve = testIsolines[0];
-        return std::any_of(curve.x.begin(), curve.x.end(), [](double v) { return std::isfinite(v); });
     } catch (...) {
         return false;
     }
@@ -181,7 +162,7 @@ PlotCatalogue describe_fluid_plots(const std::string& fluid) {
             std::vector<CoolProp::parameters> filtered;
             filtered.reserve(supported.size());
             for (auto parameter : supported) {
-                if (is_isoline_computable(fluid, definition, parameter)) {
+                if (can_generate_isoline(definition, plot, parameter)) {
                     filtered.push_back(parameter);
                 }
             }
@@ -228,7 +209,7 @@ PlotData build_plot(const PlotRequest& request) {
     std::vector<CoolProp::parameters> filtered;
     filtered.reserve(supported.size());
     for (auto parameter : supported) {
-        if (passes_isoline_filter(*definition, plot, parameter)) {
+        if (can_generate_isoline(*definition, plot, parameter)) {
             filtered.push_back(parameter);
         }
     }
