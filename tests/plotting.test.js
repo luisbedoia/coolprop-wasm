@@ -11,6 +11,71 @@ const FLUIDS = fs
   .map((line) => line.trim())
   .filter(Boolean);
 
+/** Validates a PlotTypeDescriptor has valid axes and at least one isoline option. */
+function assertPlotDescriptor(plot, expectedLabel) {
+  expect(plot.label).toMatch(new RegExp(expectedLabel, 'i'));
+  for (const axis of [plot.xAxis, plot.yAxis]) {
+    expect(typeof axis.parameter).toBe('number');
+    expect(typeof axis.scale).toBe('number');
+    expect(Number.isFinite(axis.range.min)).toBe(true);
+    expect(Number.isFinite(axis.range.max)).toBe(true);
+    expect(axis.range.max).toBeGreaterThan(axis.range.min);
+  }
+  expect(Array.isArray(plot.isolineOptions)).toBe(true);
+  expect(plot.isolineOptions.length).toBeGreaterThan(0);
+  for (const opt of plot.isolineOptions) {
+    expect(typeof opt.parameter).toBe('number');
+    expect(Number.isFinite(opt.range.min)).toBe(true);
+    expect(Number.isFinite(opt.range.max)).toBe(true);
+  }
+}
+
+/** Tries each isolineOption in order until one builds successfully.
+ *  Failed options must throw a proper Error, never a numeric WASM trap. */
+function buildWithFirstWorkingOption(buildPropertyPlot, fluid, plotId, isolineOptions) {
+  let plotData = null;
+  for (const opt of isolineOptions) {
+    try {
+      plotData = buildPropertyPlot({
+        fluid,
+        plotId,
+        isolines: [{ parameter: opt.parameter, valueCount: 3, points: 20 }],
+        includeSaturationCurves: true,
+      });
+      break;
+    } catch (e) {
+      expect(e).toBeInstanceOf(Error);
+    }
+  }
+  return plotData;
+}
+
+/** Validates a PlotData object returned by buildPropertyPlot. */
+function assertPlotData(plotData, fluid, plotId) {
+  expect(plotData).not.toBeNull();
+  expect(plotData.fluid).toBe(fluid);
+  expect(plotData.plotId).toBe(plotId);
+
+  expect(Array.isArray(plotData.isolines)).toBe(true);
+  expect(plotData.isolines.length).toBeGreaterThan(0);
+
+  for (const curve of plotData.isolines) {
+    expect(typeof curve.parameter).toBe('number');
+    expect(typeof curve.value).toBe('number');
+    expect(Array.isArray(curve.x)).toBe(true);
+    expect(Array.isArray(curve.y)).toBe(true);
+    expect(curve.x.length).toBe(curve.y.length);
+    expect(curve.x.length).toBeGreaterThan(0);
+    expect(curve.x.some(Number.isFinite)).toBe(true);
+    expect(curve.y.some(Number.isFinite)).toBe(true);
+  }
+
+  expect(Array.isArray(plotData.availableIsolines)).toBe(true);
+  expect(plotData.availableIsolines.length).toBeGreaterThan(0);
+  expect(Array.isArray(plotData.generatedIsolines)).toBe(true);
+  expect(plotData.generatedIsolines.length).toBeGreaterThan(0);
+}
+
 describe('CoolProp plotting bindings', () => {
   let describeFluidPlots;
   let buildPropertyPlot;
@@ -39,85 +104,45 @@ describe('CoolProp plotting bindings', () => {
     ).toThrow();
   });
 
+  // ─── ph (Pressure-Enthalpy) ──────────────────────────────────────────────
+
   test.each(FLUIDS)('ph plot describe and build for %s', (fluid) => {
-    // --- describe phase ---
-    // must never throw - returns {fluid, plots:[]} if unsupported
     const catalogue = describeFluidPlots(fluid);
 
     expect(catalogue).toBeTruthy();
     expect(catalogue.fluid).toBe(fluid);
     expect(Array.isArray(catalogue.plots)).toBe(true);
 
-    const phPlot = catalogue.plots.find((p) => p.id === 'ph');
+    const plot = catalogue.plots.find((p) => p.id === 'ph');
 
-    if (!phPlot) {
+    if (!plot) {
       console.log(`  ${fluid.padEnd(16)} ph: not available`);
       return;
     }
 
     console.log(`  ${fluid.padEnd(16)} ph: available`);
+    assertPlotDescriptor(plot, 'Pressure-Enthalpy');
+    assertPlotData(buildWithFirstWorkingOption(buildPropertyPlot, fluid, 'ph', plot.isolineOptions), fluid, 'ph');
+  });
 
-    expect(phPlot.label).toMatch(/Pressure-Enthalpy/i);
+  // ─── Ts (Temperature-Entropy) ────────────────────────────────────────────
 
-    for (const axis of [phPlot.xAxis, phPlot.yAxis]) {
-      expect(typeof axis.parameter).toBe('number');
-      expect(typeof axis.scale).toBe('number');
-      expect(Number.isFinite(axis.range.min)).toBe(true);
-      expect(Number.isFinite(axis.range.max)).toBe(true);
-      expect(axis.range.max).toBeGreaterThan(axis.range.min);
+  test.each(FLUIDS)('Ts plot describe and build for %s', (fluid) => {
+    const catalogue = describeFluidPlots(fluid);
+
+    expect(catalogue).toBeTruthy();
+    expect(catalogue.fluid).toBe(fluid);
+    expect(Array.isArray(catalogue.plots)).toBe(true);
+
+    const plot = catalogue.plots.find((p) => p.id === 'Ts');
+
+    if (!plot) {
+      console.log(`  ${fluid.padEnd(16)} Ts: not available`);
+      return;
     }
 
-    expect(Array.isArray(phPlot.isolineOptions)).toBe(true);
-    expect(phPlot.isolineOptions.length).toBeGreaterThan(0);
-
-    for (const opt of phPlot.isolineOptions) {
-      expect(typeof opt.parameter).toBe('number');
-      expect(Number.isFinite(opt.range.min)).toBe(true);
-      expect(Number.isFinite(opt.range.max)).toBe(true);
-    }
-
-    // --- build phase ---
-    // Try each isolineOption in order. Some parameters may fail for certain
-    // fluids (e.g. temperature isolines for IsoButane); those must throw a
-    // proper Error - never a raw numeric WASM trap. At least one must succeed.
-    let plotData = null;
-    for (const opt of phPlot.isolineOptions) {
-      try {
-        plotData = buildPropertyPlot({
-          fluid,
-          plotId: 'ph',
-          isolines: [{ parameter: opt.parameter, valueCount: 3, points: 20 }],
-          includeSaturationCurves: true,
-        });
-        break;
-      } catch (e) {
-        expect(e).toBeInstanceOf(Error);
-      }
-    }
-
-    expect(plotData).not.toBeNull();
-
-    expect(plotData.fluid).toBe(fluid);
-    expect(plotData.plotId).toBe('ph');
-
-    expect(Array.isArray(plotData.isolines)).toBe(true);
-    expect(plotData.isolines.length).toBeGreaterThan(0);
-
-    for (const curve of plotData.isolines) {
-      expect(typeof curve.parameter).toBe('number');
-      expect(typeof curve.value).toBe('number');
-      expect(Array.isArray(curve.x)).toBe(true);
-      expect(Array.isArray(curve.y)).toBe(true);
-      expect(curve.x.length).toBe(curve.y.length);
-      expect(curve.x.length).toBeGreaterThan(0);
-      expect(curve.x.some(Number.isFinite)).toBe(true);
-      expect(curve.y.some(Number.isFinite)).toBe(true);
-    }
-
-    expect(Array.isArray(plotData.availableIsolines)).toBe(true);
-    expect(plotData.availableIsolines.length).toBeGreaterThan(0);
-
-    expect(Array.isArray(plotData.generatedIsolines)).toBe(true);
-    expect(plotData.generatedIsolines.length).toBeGreaterThan(0);
+    console.log(`  ${fluid.padEnd(16)} Ts: available`);
+    assertPlotDescriptor(plot, 'Temperature-Entropy');
+    assertPlotData(buildWithFirstWorkingOption(buildPropertyPlot, fluid, 'Ts', plot.isolineOptions), fluid, 'Ts');
   });
 });

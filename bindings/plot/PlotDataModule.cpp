@@ -22,7 +22,8 @@ struct PlotDefinition {
 
 const std::vector<PlotDefinition>& plot_definitions() {
     static const std::vector<PlotDefinition> definitions = {
-        {"ph", "Pressure-Enthalpy", CoolProp::iP, CoolProp::iHmass, TPLimits::Def}
+        {"ph", "Pressure-Enthalpy",    CoolProp::iP, CoolProp::iHmass, TPLimits::Def},
+        {"Ts", "Temperature-Entropy",  CoolProp::iT, CoolProp::iSmass, TPLimits::Def},
     };
     return definitions;
 }
