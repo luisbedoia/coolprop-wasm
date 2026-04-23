@@ -142,6 +142,7 @@ inline bool contains_parameter(const std::set<int>& collection, CoolProp::parame
     return collection.find(static_cast<int>(parameter)) != collection.end();
 }
 
+
 } // namespace
 
 PlotCatalogue describe_fluid_plots(const std::string& fluid) {

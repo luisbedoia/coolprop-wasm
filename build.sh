@@ -49,6 +49,12 @@ git submodule update --init --recursive
 git -C coolprop fetch --tags
 git -C coolprop checkout v7.2.0
 
+# Fix: iP isolines in T-S plots used PS_INPUTS which triggers abort() in WASM for many states.
+# Changing TS entry to Flipped makes calc_isolines(iP) use PT_INPUTS (iterate T, compute S),
+# which is numerically stable.
+sed -i 's/{CoolProp::iP, {{TS, Yes},/{CoolProp::iP, {{TS, Flipped},/' \
+    "${ROOT_DIR}/coolprop/src/CoolPropPlot.cpp"
+
 filter_fluids
 
 echo ">>> EMSDK version   : ${EMSDK_VERSION}"
