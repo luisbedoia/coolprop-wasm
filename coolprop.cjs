@@ -2,7 +2,7 @@ let esmFactory;
 
 async function load() {
   if (!esmFactory) {
-    const mod = await import('./wasm/coolprop.js');
+    const mod = await import('./wasm/index.js');
     esmFactory = mod && mod.default ? mod.default : mod;
   }
   return esmFactory;

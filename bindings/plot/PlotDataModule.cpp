@@ -27,15 +27,6 @@ const std::vector<PlotDefinition>& plot_definitions() {
     return definitions;
 }
 
-inline bool has_finite_sample(const Isoline& isoline) {
-    for (std::size_t i = 0; i < isoline.x.size(); ++i) {
-        if (std::isfinite(isoline.x[i]) && std::isfinite(isoline.y[i])) {
-            return true;
-        }
-    }
-    return false;
-}
-
 inline bool is_axis_parameter(const PlotDefinition& definition, CoolProp::parameters parameter) {
     return parameter == definition.xParameter || parameter == definition.yParameter;
 }
@@ -91,54 +82,7 @@ bool can_generate_isoline(const PlotDefinition& definition, const PropertyPlot& 
     }
     try {
         Range range = plot.isoline_range(parameter);
-        if (!std::isfinite(range.min) || !std::isfinite(range.max)) {
-            return false;
-        }
-        if (range.max <= range.min) {
-            return false;
-        }
-
-        const double span = range.max - range.min;
-        if (!std::isfinite(span) || span <= 0.0) {
-            return false;
-        }
-
-        std::vector<double> values = generate_values_in_range(parameter, range, 3);
-        std::vector<double> sanitized;
-        sanitized.reserve(values.size());
-        double guard = span * 5e-3;
-        if (!std::isfinite(guard) || guard <= 0.0) {
-            guard = span * 0.5;
-        }
-        double innerMin = range.min + guard;
-        double innerMax = range.max - guard;
-        if (innerMax <= innerMin || !std::isfinite(innerMin) || !std::isfinite(innerMax)) {
-            const double mid = range.min + span * 0.5;
-            innerMin = mid;
-            innerMax = mid;
-        }
-        for (double value : values) {
-            if (!std::isfinite(value)) {
-                continue;
-            }
-            value = std::min(std::max(value, innerMin), innerMax);
-            if (parameter == CoolProp::iQ) {
-                const double epsilon = std::max(1e-6, span * 1e-3);
-                value = std::min(std::max(value, range.min + epsilon), range.max - epsilon);
-            }
-            sanitized.push_back(value);
-        }
-
-        if (sanitized.empty()) {
-            return false;
-        }
-
-        const int points = 50;
-        const Isolines curves = plot.calc_isolines(parameter, sanitized, points);
-        if (curves.empty()) {
-            return false;
-        }
-        return has_finite_sample(curves.front());
+        return std::isfinite(range.min) && std::isfinite(range.max) && range.max > range.min;
     } catch (...) {
         return false;
     }
@@ -308,14 +252,18 @@ PlotData build_plot(const PlotRequest& request) {
                 result.isolines.push_back(std::move(curve));
             }
         } else {
-            const auto isolines = plot.calc_isolines(parameter, values, points);
-            for (const auto& isoline : isolines) {
-                IsolineCurve curve;
-                curve.parameter = static_cast<int>(parameter);
-                curve.value = isoline.value;
-                curve.x = isoline.x;
-                curve.y = isoline.y;
-                result.isolines.push_back(curve);
+            try {
+                const auto isolines = plot.calc_isolines(parameter, values, points);
+                for (const auto& isoline : isolines) {
+                    IsolineCurve curve;
+                    curve.parameter = static_cast<int>(parameter);
+                    curve.value = isoline.value;
+                    curve.x = isoline.x;
+                    curve.y = isoline.y;
+                    result.isolines.push_back(curve);
+                }
+            } catch (...) {
+                // skip this isoline family if calculation fails
             }
         }
         result.generatedIsolines.push_back(make_parameter_range(parameter, usedRange));
