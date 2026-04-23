@@ -4,9 +4,15 @@ import { fileURLToPath, pathToFileURL } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const FLUIDS = [
+  'Water', 'Air', 'Ammonia', 'R134a', 'R22', 'Nitrogen', 'Oxygen',
+  'CarbonDioxide', 'Hydrogen', 'Helium', 'Argon', 'Methane', 'CarbonMonoxide',
+  'R32', 'R410A', 'R1234yf', 'R1234ze(E)', 'R404A', 'R507A', 'R125', 'R143a',
+  'R152A', 'n-Pentane', 'Isopentane', 'n-Butane', 'IsoButane', 'Toluene',
+  'R245fa', 'Ethanol', 'n-Propane',
+];
+
 describe('CoolProp plotting bindings', () => {
-  /** @type {import('../wasm/coolprop').MainModule | null} */
-  let module = null;
   let describeFluidPlots;
   let buildPropertyPlot;
 
@@ -20,112 +26,83 @@ describe('CoolProp plotting bindings', () => {
       throw new Error('coolprop wasm factory not found');
     }
 
-    const wasmPathResolver = (file) => path.resolve(__dirname, '..', 'wasm', file);
-
-    module = await createModule({
-      locateFile: wasmPathResolver,
+    const module = await createModule({
+      locateFile: (file) => path.resolve(__dirname, '..', 'wasm', file),
     });
 
     describeFluidPlots = module.describeFluidPlots;
     buildPropertyPlot = module.buildPropertyPlot;
   }, 120_000);
 
-  test('describeFluidPlots returns catalogue for requested fluid', () => {
-    if (!describeFluidPlots) {
-      throw new Error('describeFluidPlots not initialised');
-    }
-
-    const result = describeFluidPlots('Water');
-    console.log(JSON.stringify(result, null, 2));
-
-    expect(result).toBeTruthy();
-    expect(result.fluid).toBe('Water');
-    expect(Array.isArray(result.plots)).toBe(true);
-    expect(result.plots.length).toBeGreaterThan(0);
-
-    const phPlot = result.plots.find((plot) => plot.id === 'ph');
-    expect(phPlot).toBeTruthy();
-    expect(phPlot.label).toMatch(/Pressure-Enthalpy/i);
-    expect(phPlot.xAxis).toEqual(
-      expect.objectContaining({
-        parameter: expect.any(Number),
-        scale: expect.any(Number),
-        range: expect.objectContaining({ min: expect.any(Number), max: expect.any(Number) }),
-      }),
-    );
-    expect(phPlot.yAxis).toEqual(
-      expect.objectContaining({
-        parameter: expect.any(Number),
-        scale: expect.any(Number),
-        range: expect.objectContaining({ min: expect.any(Number), max: expect.any(Number) }),
-      }),
-    );
-    expect(Array.isArray(phPlot.isolineOptions)).toBe(true);
-    expect(phPlot.isolineOptions.length).toBeGreaterThan(0);
+  test('buildPropertyPlot rejects unsupported plot identifiers', () => {
+    expect(() =>
+      buildPropertyPlot({ fluid: 'Water', plotId: 'non-existent', isolines: [] }),
+    ).toThrow();
   });
 
-  test('buildPropertyPlot generates isoline data using discoverable parameters', () => {
-    if (!describeFluidPlots || !buildPropertyPlot) {
-      throw new Error('plotting API not initialised');
+  test.each(FLUIDS)('ph plot describe and build for %s', (fluid) => {
+    // --- describe phase ---
+    const catalogue = describeFluidPlots(fluid);
+
+    expect(catalogue.fluid).toBe(fluid);
+    expect(Array.isArray(catalogue.plots)).toBe(true);
+
+    const phPlot = catalogue.plots.find((p) => p.id === 'ph');
+    expect(phPlot).toBeDefined();
+    expect(phPlot.label).toMatch(/Pressure-Enthalpy/i);
+
+    for (const axis of [phPlot.xAxis, phPlot.yAxis]) {
+      expect(typeof axis.parameter).toBe('number');
+      expect(typeof axis.scale).toBe('number');
+      expect(Number.isFinite(axis.range.min)).toBe(true);
+      expect(Number.isFinite(axis.range.max)).toBe(true);
+      expect(axis.range.max).toBeGreaterThan(axis.range.min);
     }
 
-    const catalogue = describeFluidPlots('Water');
-    const phPlot = catalogue.plots.find((plot) => plot.id === 'ph');
-    expect(phPlot).toBeTruthy();
+    expect(Array.isArray(phPlot.isolineOptions)).toBe(true);
+    expect(phPlot.isolineOptions.length).toBeGreaterThan(0);
 
-    const targetIsoline = phPlot.isolineOptions[2];
-    expect(targetIsoline).toBeTruthy();
+    for (const opt of phPlot.isolineOptions) {
+      expect(typeof opt.parameter).toBe('number');
+      expect(Number.isFinite(opt.range.min)).toBe(true);
+      expect(Number.isFinite(opt.range.max)).toBe(true);
+    }
 
-    const request = {
-      fluid: 'Water',
+    // --- build phase ---
+    const plotData = buildPropertyPlot({
+      fluid,
       plotId: 'ph',
       isolines: [
         {
-          parameter: targetIsoline.parameter,
+          parameter: phPlot.isolineOptions[0].parameter,
           valueCount: 3,
-          points: 15,
+          points: 20,
         },
       ],
       includeSaturationCurves: true,
-    };
+    });
 
-    const plotData = buildPropertyPlot(request);
-
-    console.log(JSON.stringify(plotData, null, 2));
-
-    expect(plotData).toBeTruthy();
-    expect(plotData.fluid).toBe('Water');
+    expect(plotData.fluid).toBe(fluid);
     expect(plotData.plotId).toBe('ph');
+
     expect(Array.isArray(plotData.isolines)).toBe(true);
     expect(plotData.isolines.length).toBeGreaterThan(0);
+
     for (const curve of plotData.isolines) {
-      expect(curve).toEqual(
-        expect.objectContaining({
-          parameter: expect.any(Number),
-          value: expect.any(Number),
-          x: expect.any(Array),
-          y: expect.any(Array),
-        }),
-      );
-      expect(curve.x.length).toBeGreaterThan(0);
+      expect(typeof curve.parameter).toBe('number');
+      expect(typeof curve.value).toBe('number');
+      expect(Array.isArray(curve.x)).toBe(true);
+      expect(Array.isArray(curve.y)).toBe(true);
       expect(curve.x.length).toBe(curve.y.length);
+      expect(curve.x.length).toBeGreaterThan(0);
+      expect(curve.x.some(Number.isFinite)).toBe(true);
+      expect(curve.y.some(Number.isFinite)).toBe(true);
     }
+
+    expect(Array.isArray(plotData.availableIsolines)).toBe(true);
+    expect(plotData.availableIsolines.length).toBeGreaterThan(0);
 
     expect(Array.isArray(plotData.generatedIsolines)).toBe(true);
     expect(plotData.generatedIsolines.length).toBeGreaterThan(0);
-  });
-
-  test('buildPropertyPlot rejects unsupported plot identifiers', () => {
-    if (!buildPropertyPlot) {
-      throw new Error('buildPropertyPlot not initialised');
-    }
-
-    expect(() =>
-      buildPropertyPlot({
-        fluid: 'Water',
-        plotId: 'non-existent',
-        isolines: [],
-      }),
-    ).toThrow();
   });
 });
