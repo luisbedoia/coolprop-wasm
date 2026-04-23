@@ -65,6 +65,7 @@ set(APP_INCLUDE_DIRS
   "${COOLPROP_DIR}/externals/msgpack-c/include"
   "${COOLPROP_DIR}/externals/miniz-3.0.2"
   "${COOLPROP_DIR}/externals/incbin"
+  "${COOLPROP_DIR}/externals/nlohmann-json"
   "${COOLPROP_DIR}/externals/fmtlib/include"
   "${COOLPROP_DIR}/boost_CoolProp"
   "${COOLPROP_DIR}/dev"

@@ -47,7 +47,7 @@ git config --global --add safe.directory /app/coolprop
 
 git submodule update --init --recursive
 git -C coolprop fetch --tags
-git -C coolprop checkout v6.8.0
+git -C coolprop checkout v7.2.0
 
 filter_fluids
 
