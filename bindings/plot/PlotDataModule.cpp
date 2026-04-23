@@ -75,15 +75,25 @@ inline IsolineCurve make_horizontal_isoline(double value, int points, const Prop
 }
 
 bool can_generate_isoline(const PlotDefinition& definition, const PropertyPlot& plot, CoolProp::parameters parameter) {
+    // Axis parameters produce straight grid lines identical to the plot axes — not useful as isolines.
     if (is_axis_parameter(definition, parameter)) {
-        return true;
+        return false;
     }
     if (parameter == CoolProp::iDmass || parameter == CoolProp::iSmass) {
         return false;
     }
     try {
         Range range = plot.isoline_range(parameter);
-        return std::isfinite(range.min) && std::isfinite(range.max) && range.max > range.min;
+        if (!std::isfinite(range.min) || !std::isfinite(range.max) || range.max <= range.min) {
+            return false;
+        }
+        // Validate that at least one isoline is actually computable for this parameter.
+        // Some parameters (e.g. iHmass in Ts space) have a valid range but produce no finite points.
+        const double midValue = (range.min + range.max) / 2.0;
+        const auto testIsolines = plot.calc_isolines(parameter, {midValue}, 5);
+        if (testIsolines.empty()) return false;
+        const auto& curve = testIsolines[0];
+        return std::any_of(curve.x.begin(), curve.x.end(), [](double v) { return std::isfinite(v); });
     } catch (...) {
         return false;
     }
@@ -164,8 +174,6 @@ PlotCatalogue describe_fluid_plots(const std::string& fluid) {
                 }
             }
 
-            ensure_axis_parameters(definition, filtered);
-
             descriptor.isolineOptions.reserve(filtered.size());
             for (auto parameter : filtered) {
                 try {
@@ -212,8 +220,6 @@ PlotData build_plot(const PlotRequest& request) {
             filtered.push_back(parameter);
         }
     }
-
-    ensure_axis_parameters(*definition, filtered);
 
     result.availableIsolines.reserve(filtered.size());
     for (auto parameter : filtered) {
