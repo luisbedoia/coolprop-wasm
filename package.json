@@ -36,19 +36,19 @@
   "homepage": "https://github.com/luisbedoia/coolprop-wasm#readme",
   "type": "module",
   "main": "coolprop.cjs",
-  "module": "wasm/index.js",
+  "module": "index.js",
   "types": "wasm/coolprop.d.ts",
   "exports": {
     ".": {
       "types": "./wasm/coolprop.d.ts",
-      "import": "./wasm/index.js",
+      "import": "./index.js",
       "require": "./coolprop.cjs",
-      "default": "./wasm/index.js"
+      "default": "./index.js"
     }
   },
   "files": [
+    "index.js",
     "coolprop.cjs",
-    "wasm/index.js",
     "wasm/coolprop.js",
     "wasm/coolprop.wasm",
     "wasm/coolprop.d.ts"

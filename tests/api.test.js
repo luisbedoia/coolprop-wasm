@@ -15,7 +15,7 @@ describe('CoolProp WASM API', () => {
   let module = null;
 
   beforeAll(async () => {
-    const modulePath = path.resolve(__dirname, '..', 'wasm', 'index.js');
+    const modulePath = path.resolve(__dirname, '..', 'index.js');
     const factoryModule = await import(pathToFileURL(modulePath).href);
     const createModule = factoryModule.default;
 

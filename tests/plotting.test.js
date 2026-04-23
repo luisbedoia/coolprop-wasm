@@ -81,7 +81,7 @@ describe('CoolProp plotting bindings', () => {
   let buildPropertyPlot;
 
   beforeAll(async () => {
-    const modulePath = path.resolve(__dirname, '..', 'wasm', 'index.js');
+    const modulePath = path.resolve(__dirname, '..', 'index.js');
     const moduleUrl = pathToFileURL(modulePath).href;
     const factoryModule = await import(moduleUrl);
     const createModule = factoryModule.default;
