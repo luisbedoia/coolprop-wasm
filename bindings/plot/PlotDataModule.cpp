@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 #include <limits>
 #include <set>
 
@@ -88,10 +87,8 @@ bool can_generate_isoline(const PlotDefinition& definition, const PropertyPlot& 
         return true;
     }
     if (parameter == CoolProp::iDmass || parameter == CoolProp::iSmass) {
-        std::cerr << "Skipping unsupported isoline parameter " << static_cast<int>(parameter) << std::endl;
         return false;
     }
-    std::cerr << "can_generate_isoline begin " << static_cast<int>(parameter) << std::endl;
     try {
         Range range = plot.isoline_range(parameter);
         if (!std::isfinite(range.min) || !std::isfinite(range.max)) {
@@ -137,20 +134,12 @@ bool can_generate_isoline(const PlotDefinition& definition, const PropertyPlot& 
         }
 
         const int points = 50;
-        std::cerr << "range min=" << range.min << " max=" << range.max << std::endl;
-        for (double value : sanitized) {
-            std::cerr << " value candidate=" << value << std::endl;
-        }
-
         const Isolines curves = plot.calc_isolines(parameter, sanitized, points);
         if (curves.empty()) {
             return false;
         }
-        const bool finite = has_finite_sample(curves.front());
-        std::cerr << "can_generate_isoline success " << static_cast<int>(parameter) << " finite=" << finite << std::endl;
-        return finite;
+        return has_finite_sample(curves.front());
     } catch (...) {
-        std::cerr << "can_generate_isoline exception for parameter " << static_cast<int>(parameter) << std::endl;
         return false;
     }
 }
@@ -214,7 +203,6 @@ PlotCatalogue describe_fluid_plots(const std::string& fluid) {
     for (const auto& definition : plot_definitions()) {
         try {
             PropertyPlot plot(fluid, definition.yParameter, definition.xParameter, definition.limits);
-            std::cerr << "Built plot for fluid " << fluid << std::endl;
 
             PlotTypeDescriptor descriptor;
             descriptor.id = definition.id;
@@ -223,11 +211,9 @@ PlotCatalogue describe_fluid_plots(const std::string& fluid) {
             descriptor.yAxis = make_axis_metadata(definition.yParameter, plot.yaxis);
 
             std::vector<CoolProp::parameters> supported = plot.supported_isoline_keys();
-            std::cerr << "Supported count: " << supported.size() << std::endl;
             std::vector<CoolProp::parameters> filtered;
             filtered.reserve(supported.size());
             for (auto parameter : supported) {
-                std::cerr << "Checking parameter " << static_cast<int>(parameter) << std::endl;
                 if (can_generate_isoline(definition, plot, parameter)) {
                     filtered.push_back(parameter);
                 }
@@ -235,27 +221,20 @@ PlotCatalogue describe_fluid_plots(const std::string& fluid) {
 
             ensure_axis_parameters(definition, filtered);
 
-            std::cerr << "Filtered count: " << filtered.size() << std::endl;
             descriptor.isolineOptions.reserve(filtered.size());
             for (auto parameter : filtered) {
                 try {
-                    std::cerr << "Range for parameter " << static_cast<int>(parameter) << std::endl;
                     descriptor.isolineOptions.push_back(make_parameter_range(parameter, range_for_parameter(definition, plot, parameter)));
                 } catch (...) {
                     // Unexpected failures: skip problematic parameters
-                    std::cerr << "Failed to get range for parameter " << static_cast<int>(parameter) << std::endl;
                 }
             }
 
             catalogue.plots.push_back(descriptor);
-            std::cerr << "Added plot descriptor with " << descriptor.isolineOptions.size() << " isolines" << std::endl;
         } catch (...) {
             // If plot cannot be constructed for this fluid, skip it silently
-            std::cerr << "Failed to build plot for fluid " << fluid << std::endl;
         }
     }
-
-    std::cerr << "Returning catalogue with " << catalogue.plots.size() << " plots" << std::endl;
 
     return catalogue;
 }
